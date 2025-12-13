@@ -1,0 +1,23 @@
+# InkForge - Contexte Projet
+
+## À lire en priorité
+- INKFORGE.md : Document de vision et architecture du projet
+
+## Résumé du Projet
+InkForge est un écosystème de développement centré sur la tablette reMarkable avec 5 axes :
+1. **INPUT** : Coder par le croquis (dessins → code)
+2. **APPS** : Développer des apps natives pour reMarkable
+3. **OUTPUT** : Claude génère des diagrammes/SVG
+4. **THINKING** : Espace de réflexion assistée
+5. **HUB** : Supervision multi-instances Claude (PC/SSH/Cloud) depuis reMarkable/Android
+
+## Stack Technique
+- Hub Central : Node.js/Go + WebSocket + Redis
+- Client reMarkable : rmkit (C++)
+- Client Android : Kotlin/Flutter
+- Agents : Claude Code CLI avec hooks
+
+## Liens Utiles
+- SDK reMarkable : https://developer.remarkable.com/documentation/sdk
+- rmkit : https://rmkit.dev/
+- remarkable-mcp : https://sam-morrow.com/blog/building-an-mcp-server-for-remarkable

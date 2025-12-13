@@ -1,0 +1,45 @@
+# HIVE is a separate repo - exclude from INKFORGE
+HIVE/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# rM-docker specific
+rM-docker/rootfs.qcow2
+rM-docker/*.img
+rM-docker/firmware/
+
+# Node modules (if any)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
