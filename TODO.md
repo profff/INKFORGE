@@ -2,21 +2,33 @@
 
 ## En cours : POC Visual Loop
 
-### Phase 1 : Setup
+### Phase 1 : Setup ✅
+- [x] Setup canvas HTML5 (sans tldraw pour l'instant)
+- [x] Configurer Claude API (Vision)
 - [ ] Commander tablette Wacom (Intuos S ou M)
-- [ ] Setup projet tldraw + React
-- [ ] Configurer Claude API (Vision)
 
-### Phase 2 : Premier loop
-- [ ] Capturer le canvas tldraw → export PNG
-- [ ] Envoyer à Claude Vision
-- [ ] Afficher la réponse texte
-- [ ] Claude génère SVG → render dans le canvas
+### Phase 2 : Premier loop ✅
+- [x] Capturer le canvas → export PNG
+- [x] Envoyer à Claude Vision
+- [x] Afficher la réponse texte
+- [x] Claude génère SVG → render dans le canvas
+- [x] Auto-send avec debounce
+- [x] Position tracking + injection positionnée
 
-### Phase 3 : Conversation
-- [ ] Multi-turn (historique des échanges)
-- [ ] Annotations sur les réponses de Claude
-- [ ] Modes de conversation (brainstorm, design, archi)
+### Phase 3 : Conversation ✅
+- [x] Multi-turn (historique des échanges)
+- [x] Apprentissage des conventions utilisateur
+- [x] Sélecteur d'intention (ajouter/modifier/supprimer/expliquer)
+- [x] UI 3 panneaux (prompt envoyé, analyse, chat)
+
+### Phase 4 : Architecture & Concepts 🔜
+- [ ] **Séparer les couches conceptuelles :**
+  - Sujet de fond (le domaine : UML, todolist, wireframe...)
+  - Forme (la représentation : SVG, texte, Mermaid...)
+  - Méthode de travail (comment on itère : focus, comparaison...)
+  - Actions/Intentions (ajouter, modifier, supprimer, annoter...)
+- [ ] Définir une architecture modulaire pour ces concepts
+- [ ] Agent dédié "intent detector" vs agent "content generator" ?
 
 ---
 
