@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INKFORGE - Visual Loop POC</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            padding: 10px 20px;
+            background: #16213e;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        header h1 { font-size: 1.2em; color: #e94560; }
+        .api-key-input {
+            padding: 5px 10px;
+            background: #0f0f23;
+            border: 1px solid #333;
+            color: #eee;
+            border-radius: 4px;
+            width: 280px;
+        }
+        .context-input {
+            padding: 5px 10px;
+            background: #0f0f23;
+            border: 1px solid #4a9;
+            color: #eee;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .context-input::placeholder { color: #4a9; }
+        .controls { display: flex; gap: 10px; }
+        button {
+            padding: 8px 16px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #ff6b6b; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        button.secondary { background: #333; }
+        button.secondary:hover { background: #444; }
+        main {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            min-height: 0;
+        }
+        .panel {
+            flex: 1;
+            background: #16213e;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 10px 15px;
+            background: #0f3460;
+            font-weight: bold;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-header button {
+            padding: 4px 10px;
+            font-size: 0.8em;
+        }
+        .panel-content {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+        }
+        #sketchCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        /* Right panel sections */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .section {
+            background: #0f3460;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .section.flex-grow {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .section-header {
+            padding: 6px 10px;
+            background: #1a1a3e;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #4a9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-header button {
+            padding: 2px 8px;
+            font-size: 0.85em;
+        }
+        .section-content {
+            padding: 8px 10px;
+            font-size: 0.85em;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .section.flex-grow .section-content {
+            flex: 1;
+            max-height: none;
+        }
+        .section-content .placeholder {
+            color: #666;
+            font-style: italic;
+        }
+        .sent-images {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .sent-images img {
+            max-height: 60px;
+            border: 1px solid #333;
+            border-radius: 3px;
+        }
+        .sent-images .label {
+            font-size: 0.7em;
+            color: #888;
+            text-align: center;
+        }
+        .chat-history {
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .chat-message.user {
+            background: #1a3a5c;
+            border-left: 3px solid #4a9;
+        }
+        .chat-message.assistant {
+            background: #2a2a4e;
+            border-left: 3px solid #e94560;
+        }
+        .chat-message .role {
+            font-size: 0.75em;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .chat-message svg {
+            max-width: 100%;
+            background: white;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        #analysis {
+            color: #aaa;
+        }
+        .status {
+            padding: 5px 10px;
+            background: #0f0f23;
+            font-size: 0.8em;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+        .loading { color: #e94560; animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: 0.5; } }
+        .mode-indicator {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            background: #4a9;
+            color: #000;
+        }
+        .mode-indicator.drawing { background: #e94560; color: #fff; }
+        .mode-indicator.countdown { background: #f0a500; color: #000; }
+        .auto-send-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85em;
+        }
+        .auto-send-toggle input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .auto-send-toggle label {
+            cursor: pointer;
+            user-select: none;
+        }
+        .delay-select {
+            padding: 4px 8px;
+            background: #0f3460;
+            border: 1px solid #4a9;
+            color: #fff;
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .cursor-draw {
+            cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><circle cx="4" cy="4" r="3" fill="none" stroke="black" stroke-width="1"/></svg>') 4 4, crosshair;
+        }
+        .cursor-erase {
+            cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="none" stroke="red" stroke-width="2"/></svg>') 10 10, crosshair;
+        }
+        .chat-input-container {
+            display: flex;
+            gap: 5px;
+            padding: 5px 10px;
+            background: #0f3460;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 6px 10px;
+            background: #0f0f23;
+            border: 1px solid #4a9;
+            color: #eee;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .chat-input::placeholder { color: #666; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>INKFORGE</h1>
+        <input type="password" class="api-key-input" id="apiKey" placeholder="Claude API Key (sk-ant-...)">
+        <input type="text" class="context-input" id="contextInput" placeholder="Contexte: décris ce que tu dessines (ex: 'un smiley', 'architecture microservices')">
+        <div class="auto-send-toggle">
+            <input type="checkbox" id="autoSendToggle">
+            <label for="autoSendToggle">Auto</label>
+            <select class="delay-select" id="autoSendDelay">
+                <option value="1">1s</option>
+                <option value="2" selected>2s</option>
+                <option value="3">3s</option>
+                <option value="5">5s</option>
+            </select>
+        </div>
+        <div class="auto-send-toggle">
+            <input type="checkbox" id="focusModeToggle">
+            <label for="focusModeToggle">Focus</label>
+        </div>
+        <div class="auto-send-toggle">
+            <label for="intentSelect">Action:</label>
+            <select class="delay-select" id="intentSelect">
+                <option value="auto">Auto</option>
+                <option value="add">➕ Ajouter</option>
+                <option value="modify">✏️ Modifier</option>
+                <option value="delete">❌ Supprimer</option>
+                <option value="explain">💬 Expliquer</option>
+            </select>
+        </div>
+        <div class="controls">
+            <button class="secondary" onclick="clearCanvas()">Clear</button>
+            <button class="secondary" onclick="undoLastAI()">Undo</button>
+            <button class="secondary" onclick="redoLastAI()">Redo</button>
+            <button class="secondary" onclick="newConversation()">New Chat</button>
+            <button class="secondary" onclick="showConventions()" title="Voir les conventions apprises">📚</button>
+            <button id="sendBtn" onclick="sendToClaude()">Send</button>
+        </div>
+    </header>
+    <main>
+        <div class="panel">
+            <div class="panel-header">
+                <span>Canvas</span>
+                <span class="mode-indicator" id="modeIndicator">Ready</span>
+            </div>
+            <div class="panel-content" id="canvasContainer">
+                <canvas id="sketchCanvas" class="cursor-draw"></canvas>
+            </div>
+            <div class="status">
+                <span id="canvasStatus">Draw something</span>
+                <span id="hint">Tip: ajoute du contexte dans le champ ci-dessus</span>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Message texte (ex: 'ajoute une flèche entre A et B', 'c'est un UML pas un sac')">
+                <button onclick="sendTextMessage()">Chat</button>
+            </div>
+        </div>
+        <div class="panel right-panel">
+            <!-- Section 1: Prompt envoyé -->
+            <div class="section" id="promptSection">
+                <div class="section-header">📤 Prompt envoyé</div>
+                <div class="section-content" id="sentPrompt">
+                    <span class="placeholder">En attente d'envoi...</span>
+                </div>
+            </div>
+            <!-- Section 2: Analyse Claude -->
+            <div class="section" id="analysisSection">
+                <div class="section-header">🧠 Analyse</div>
+                <div class="section-content" id="analysis">
+                    <span class="placeholder">-</span>
+                </div>
+            </div>
+            <!-- Section 3: Chat + Réponse -->
+            <div class="section flex-grow">
+                <div class="section-header">
+                    <span>💬 Conversation</span>
+                    <button class="secondary" onclick="injectSVGToCanvas()">← Inject SVG</button>
+                </div>
+                <div class="section-content chat-history" id="chatHistory">
+                    <span class="placeholder">Dessine quelque chose pour commencer...</span>
+                </div>
+            </div>
+            <div class="status">
+                <span id="responseStatus">-</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('sketchCanvas');
+        const ctx = canvas.getContext('2d');
+        const sentPromptEl = document.getElementById('sentPrompt');
+        const analysisEl = document.getElementById('analysis');
+        const chatHistoryEl = document.getElementById('chatHistory');
+        const canvasStatus = document.getElementById('canvasStatus');
+        const responseStatus = document.getElementById('responseStatus');
+        const sendBtn = document.getElementById('sendBtn');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const contextInput = document.getElementById('contextInput');
+        const autoSendToggle = document.getElementById('autoSendToggle');
+        const autoSendDelay = document.getElementById('autoSendDelay');
+        const focusModeToggle = document.getElementById('focusModeToggle');
+        const intentSelect = document.getElementById('intentSelect');
+
+        let isDrawing = false;
+        let isErasing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let strokeCount = 0;
+
+        // Store previous canvas state for Focus mode comparison
+        let previousCanvasState = null; // DataURL of canvas before last AI response
+        let modifiedBounds = null; // {minX, minY, maxX, maxY} - for visual debug
+        let lastModifiedBounds = null; // Store bounds at send time for SVG injection
+        let lastSVG = null;
+        let conversationHistory = []; // Store {role, content} messages
+        let autoSendTimer = null;
+        let countdownInterval = null;
+        let countdownValue = 0;
+
+        // Resize canvas to fit container
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Disable context menu on canvas
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Drawing events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            startDrawing({ offsetX: touch.clientX - rect.left, offsetY: touch.clientY - rect.top });
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            draw({ offsetX: touch.clientX - rect.left, offsetY: touch.clientY - rect.top });
+        });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            isErasing = e.button === 2; // Right click = eraser
+            cancelAutoSend();
+
+            if (isErasing) {
+                modeIndicator.textContent = 'Erasing...';
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 15;
+                canvas.className = 'cursor-erase';
+            } else {
+                modeIndicator.textContent = 'Drawing...';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                canvas.className = 'cursor-draw';
+            }
+            modeIndicator.className = 'mode-indicator drawing';
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+
+            // Track modified bounds
+            updateModifiedBounds(lastX, lastY);
+            updateModifiedBounds(e.offsetX, e.offsetY);
+
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function updateModifiedBounds(x, y) {
+            const margin = 15;
+            if (!modifiedBounds) {
+                modifiedBounds = { minX: x - margin, minY: y - margin, maxX: x + margin, maxY: y + margin };
+            } else {
+                modifiedBounds.minX = Math.max(0, Math.min(modifiedBounds.minX, x - margin));
+                modifiedBounds.minY = Math.max(0, Math.min(modifiedBounds.minY, y - margin));
+                modifiedBounds.maxX = Math.min(canvas.width, Math.max(modifiedBounds.maxX, x + margin));
+                modifiedBounds.maxY = Math.min(canvas.height, Math.max(modifiedBounds.maxY, y + margin));
+            }
+            // Update debug overlay
+            drawModifiedOverlay();
+        }
+
+        // Debug overlay for modified region
+        let overlayCanvas = null;
+        function drawModifiedOverlay() {
+            if (!focusModeToggle.checked || !modifiedBounds) {
+                if (overlayCanvas) overlayCanvas.style.display = 'none';
+                return;
+            }
+
+            if (!overlayCanvas) {
+                overlayCanvas = document.createElement('canvas');
+                overlayCanvas.style.position = 'absolute';
+                overlayCanvas.style.top = '0';
+                overlayCanvas.style.left = '0';
+                overlayCanvas.style.pointerEvents = 'none';
+                overlayCanvas.style.zIndex = '10';
+                canvas.parentElement.appendChild(overlayCanvas);
+            }
+
+            overlayCanvas.width = canvas.width;
+            overlayCanvas.height = canvas.height;
+            overlayCanvas.style.display = 'block';
+
+            const octx = overlayCanvas.getContext('2d');
+            octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            const { minX, minY, maxX, maxY } = modifiedBounds;
+            octx.strokeStyle = 'orange';
+            octx.lineWidth = 2;
+            octx.setLineDash([5, 3]);
+            octx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                if (!isErasing) {
+                    strokeCount++;
+                    canvasStatus.textContent = `Strokes: ${strokeCount}`;
+                }
+                modeIndicator.textContent = 'Ready';
+                modeIndicator.className = 'mode-indicator';
+
+                // Reset to draw mode
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                canvas.className = 'cursor-draw';
+
+                // Start auto-send countdown if enabled (only for drawing, not erasing)
+                if (autoSendToggle.checked && strokeCount > 0 && !isErasing) {
+                    startAutoSendCountdown();
+                }
+            }
+            isDrawing = false;
+            isErasing = false;
+        }
+
+        function cancelAutoSend() {
+            if (autoSendTimer) {
+                clearTimeout(autoSendTimer);
+                autoSendTimer = null;
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }
+
+        function startAutoSendCountdown() {
+            cancelAutoSend();
+
+            const delay = parseInt(autoSendDelay.value) || 2;
+            countdownValue = delay;
+
+            // Update indicator immediately
+            modeIndicator.textContent = `Send in ${countdownValue}s...`;
+            modeIndicator.className = 'mode-indicator countdown';
+
+            // Countdown display
+            countdownInterval = setInterval(() => {
+                countdownValue--;
+                if (countdownValue > 0) {
+                    modeIndicator.textContent = `Send in ${countdownValue}s...`;
+                }
+            }, 1000);
+
+            // Actual send timer
+            autoSendTimer = setTimeout(() => {
+                cancelAutoSend();
+                if (!sendBtn.disabled) {
+                    sendToClaude();
+                }
+            }, delay * 1000);
+        }
+
+        function clearCanvas() {
+            cancelAutoSend();
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            strokeCount = 0;
+            canvasStatus.textContent = 'Draw something';
+            modeIndicator.textContent = 'Ready';
+            modeIndicator.className = 'mode-indicator';
+            lastSVG = null;
+            canvasBeforeAI = null;
+            previousCanvasState = null;
+            modifiedBounds = null;
+            if (overlayCanvas) overlayCanvas.style.display = 'none';
+        }
+
+        // Store canvas state before/after AI injection for undo/redo
+        let canvasBeforeAI = null;
+        let canvasAfterAI = null;
+        let isUndone = false;
+
+        function undoLastAI() {
+            if (canvasBeforeAI && !isUndone) {
+                // Save current (after AI) state for redo
+                canvasAfterAI = canvas.toDataURL();
+
+                const img = new Image();
+                img.onload = () => {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = canvasBeforeAI;
+                isUndone = true;
+                canvasStatus.textContent = `Strokes: ${strokeCount} (AI removed - Redo available)`;
+            } else {
+                canvasStatus.textContent = 'Nothing to undo';
+            }
+        }
+
+        function redoLastAI() {
+            if (canvasAfterAI && isUndone) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = canvasAfterAI;
+                isUndone = false;
+                canvasStatus.textContent = `AI restored`;
+            } else {
+                canvasStatus.textContent = 'Nothing to redo';
+            }
+        }
+
+        function newConversation() {
+            conversationHistory = [];
+            sentPromptEl.innerHTML = '<span class="placeholder">En attente d\'envoi...</span>';
+            analysisEl.innerHTML = '<span class="placeholder">-</span>';
+            chatHistoryEl.innerHTML = '<span class="placeholder">Nouvelle conversation. Dessine quelque chose...</span>';
+            responseStatus.textContent = 'Chat reset';
+            previousCanvasState = null;
+            updateConversationIndicator();
+        }
+
+        async function sendTextMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert('Entre ta clé API Claude');
+                return;
+            }
+
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+            responseStatus.textContent = 'Envoi message...';
+            responseStatus.className = 'status loading';
+            modeIndicator.textContent = 'Thinking...';
+            modeIndicator.className = 'mode-indicator loading';
+
+            // Try to learn convention from correction
+            detectAndLearnConvention(message);
+
+            // Add user message to history
+            conversationHistory.push({
+                role: 'user',
+                content: message
+            });
+
+            // System prompt with learned conventions
+            const learnedConventions = JSON.parse(localStorage.getItem('inkforge_conventions') || '[]');
+            const conventionsText = learnedConventions.length > 0
+                ? `\n\nCONVENTIONS DE CET UTILISATEUR:\n${learnedConventions.map(c => `- ${c.pattern} = ${c.meaning}`).join('\n')}`
+                : '';
+
+            const systemPrompt = `Tu es un assistant de communication visuelle PROACTIF. L'utilisateur dessine, annote, rature pour communiquer avec toi.
+
+🎯 COMPORTEMENT PRINCIPAL:
+TOUJOURS générer une VERSION PROPRE en SVG, sauf si c'est juste du texte conversationnel.
+- Liste de tâches manuscrite → SVG propre avec checkboxes
+- Schéma brouillon → SVG structuré
+- Notes/brainstorm → SVG ou markdown structuré
+- Wireframe → SVG propre du UI
+
+FORMAT DE RÉPONSE (court):
+1. **🔍** (1 ligne) Ce que tu vois
+2. **🧠** (1 ligne) Ton interprétation
+3. **✏️** TON SVG ou contenu structuré (partie principale!)
+
+MÉTA-ANNOTATIONS (ne pas inclure dans le SVG):
+- Croix/rature sur élément = SUPPRIMER cet élément
+- Cercle autour = FOCUS/emphase
+- Flèche = relation ou déplacement
+${conventionsText}
+
+SVG: viewBox="0 0 400 300", fond blanc.
+Français. Concis en analyse, généreux en production.`;
+
+            try {
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 4096,
+                        system: systemPrompt,
+                        messages: conversationHistory
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error?.message || 'API Error');
+                }
+
+                const data = await res.json();
+                const text = data.content[0].text;
+
+                // Add assistant response to history
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: text
+                });
+
+                // Keep only last 10 exchanges
+                if (conversationHistory.length > 20) {
+                    conversationHistory = conversationHistory.slice(-20);
+                }
+
+                updateConversationIndicator();
+
+                // Extract SVG if present
+                const svgMatch = text.match(/<svg[\s\S]*?<\/svg>/i);
+                if (svgMatch) {
+                    lastSVG = svgMatch[0];
+                }
+
+                // Parse and display response
+                const { analysis, mainContent } = parseClaudeResponse(text);
+                showAnalysis(analysis);
+                addToChatHistory('user', message);
+                addToChatHistory('assistant', text);
+
+                responseStatus.textContent = `Tokens: ${data.usage?.input_tokens || '?'} in / ${data.usage?.output_tokens || '?'} out`;
+                responseStatus.className = 'status';
+                modeIndicator.textContent = 'Ready';
+                modeIndicator.className = 'mode-indicator';
+
+                // Auto-inject SVG if present
+                if (svgMatch) {
+                    injectSVGToCanvas();
+                }
+
+                chatInput.value = '';
+
+            } catch (err) {
+                // Remove failed message from history
+                conversationHistory.pop();
+                analysisEl.innerHTML = `<span style="color:#e94560">Erreur: ${err.message}</span>`;
+                responseStatus.textContent = 'Erreur';
+                responseStatus.className = 'status';
+                modeIndicator.textContent = 'Error';
+                modeIndicator.className = 'mode-indicator drawing';
+            }
+
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+
+        // Allow Enter key to send chat message
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendTextMessage();
+            }
+        });
+
+        function updateConversationIndicator() {
+            const turns = Math.floor(conversationHistory.length / 2);
+            const conventions = JSON.parse(localStorage.getItem('inkforge_conventions') || '[]');
+            if (conventions.length > 0) {
+                document.getElementById('hint').textContent = `${turns} échange${turns > 1 ? 's' : ''} | ${conventions.length} convention${conventions.length > 1 ? 's' : ''} apprises`;
+            } else if (turns > 0) {
+                document.getElementById('hint').textContent = `Conversation: ${turns} échange${turns > 1 ? 's' : ''} - Claude se souvient`;
+            } else {
+                document.getElementById('hint').textContent = 'Tip: corrige Claude pour qu\'il apprenne tes conventions';
+            }
+        }
+
+        // UI Helper: Show sent prompt with images
+        function showSentPrompt(images, promptText, isFocusMode) {
+            let html = '<div class="sent-images">';
+            if (isFocusMode && images.length === 2) {
+                html += `<div><img src="data:image/png;base64,${images[0]}" alt="Avant"><div class="label">AVANT</div></div>`;
+                html += `<div><img src="data:image/png;base64,${images[1]}" alt="Après"><div class="label">APRÈS</div></div>`;
+            } else if (images.length > 0) {
+                html += `<div><img src="data:image/png;base64,${images[0]}" alt="Canvas"><div class="label">Canvas</div></div>`;
+            }
+            html += '</div>';
+            html += `<div style="color:#888;font-size:0.85em;">${escapeHtml(promptText).substring(0, 150)}${promptText.length > 150 ? '...' : ''}</div>`;
+            sentPromptEl.innerHTML = html;
+        }
+
+        // UI Helper: Parse Claude response and separate analysis from content
+        function parseClaudeResponse(text) {
+            // Extract analysis sections (🔍 and 🧠)
+            const analysisMatch = text.match(/(\*\*🔍\*\*[^\n]*(?:\n[^\*\n]*)*)?[\s\S]*?(\*\*🧠\*\*[^\n]*(?:\n[^\*\n]*)*)?/);
+            let analysis = '';
+            let mainContent = text;
+
+            // Find 🔍 section
+            const seeMatch = text.match(/\*\*🔍\*\*\s*([^\n]*(?:\n(?!\*\*)[^\n]*)*)/);
+            if (seeMatch) analysis += `🔍 ${seeMatch[1].trim()}\n`;
+
+            // Find 🧠 section
+            const thinkMatch = text.match(/\*\*🧠\*\*\s*([^\n]*(?:\n(?!\*\*)[^\n]*)*)/);
+            if (thinkMatch) analysis += `🧠 ${thinkMatch[1].trim()}`;
+
+            // Main content is after ✏️ or the SVG
+            const mainMatch = text.match(/\*\*✏️\*\*[\s\S]*((?:<svg|[^])*)/);
+            if (mainMatch) {
+                mainContent = mainMatch[1].trim();
+            }
+
+            return { analysis: analysis.trim(), mainContent };
+        }
+
+        // UI Helper: Add message to chat history
+        function addToChatHistory(role, content, isImage = false) {
+            // Remove placeholder if present
+            const placeholder = chatHistoryEl.querySelector('.placeholder');
+            if (placeholder) placeholder.remove();
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${role}`;
+
+            const roleLabel = role === 'user' ? '👤 Toi' : '🤖 Claude';
+            msgDiv.innerHTML = `<div class="role">${roleLabel}</div>`;
+
+            if (isImage) {
+                msgDiv.innerHTML += `<span style="color:#666">[Image envoyée]</span>`;
+            } else {
+                // Render content (with SVG support)
+                msgDiv.innerHTML += renderResponse(content);
+            }
+
+            chatHistoryEl.appendChild(msgDiv);
+            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+        }
+
+        // UI Helper: Update analysis section
+        function showAnalysis(text) {
+            if (text) {
+                analysisEl.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+            } else {
+                analysisEl.innerHTML = '<span class="placeholder">-</span>';
+            }
+        }
+
+        // Learn conventions from user corrections
+        function detectAndLearnConvention(message) {
+            // Patterns like: "X = Y", "X veut dire Y", "non X c'est Y", "quand je fais X ça veut dire Y"
+            const patterns = [
+                /(?:non[,\s]*)?(?:une?\s+)?(.+?)\s*(?:=|veut dire|signifie|c'est|ça veut dire)\s+(.+)/i,
+                /quand je (?:fais|dessine|trace)\s+(.+?)[,\s]+(?:ça |c'est |cela )(?:veut dire|signifie)\s+(.+)/i,
+            ];
+
+            for (const pattern of patterns) {
+                const match = message.match(pattern);
+                if (match) {
+                    const patternName = match[1].trim().toLowerCase();
+                    const meaning = match[2].trim().toLowerCase();
+
+                    // Don't store if too long or too short
+                    if (patternName.length < 2 || patternName.length > 30) continue;
+                    if (meaning.length < 2 || meaning.length > 50) continue;
+
+                    const conventions = JSON.parse(localStorage.getItem('inkforge_conventions') || '[]');
+
+                    // Check if already exists, update if so
+                    const existing = conventions.findIndex(c => c.pattern === patternName);
+                    if (existing >= 0) {
+                        conventions[existing].meaning = meaning;
+                    } else {
+                        conventions.push({ pattern: patternName, meaning: meaning });
+                    }
+
+                    // Keep max 20 conventions
+                    if (conventions.length > 20) conventions.shift();
+
+                    localStorage.setItem('inkforge_conventions', JSON.stringify(conventions));
+                    console.log(`📚 Convention apprise: "${patternName}" = "${meaning}"`);
+                    updateConversationIndicator();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function showConventions() {
+            const conventions = JSON.parse(localStorage.getItem('inkforge_conventions') || '[]');
+            if (conventions.length === 0) {
+                alert('Aucune convention apprise.\n\nCorrige Claude pour lui apprendre tes conventions:\n"la croix veut dire suppression"\n"un cercle = focus"');
+            } else {
+                const list = conventions.map(c => `• ${c.pattern} = ${c.meaning}`).join('\n');
+                if (confirm(`Conventions apprises:\n\n${list}\n\nVoulez-vous les effacer?`)) {
+                    localStorage.removeItem('inkforge_conventions');
+                    updateConversationIndicator();
+                }
+            }
+        }
+
+        async function sendToClaude() {
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert('Entre ta clé API Claude');
+                return;
+            }
+
+            const userContext = contextInput.value.trim();
+
+            sendBtn.disabled = true;
+            responseStatus.textContent = 'Envoi en cours...';
+            responseStatus.className = 'status loading';
+            modeIndicator.textContent = 'Thinking...';
+            modeIndicator.className = 'mode-indicator loading';
+
+            // Get canvas as base64
+            const currentImageData = canvas.toDataURL('image/png').split(',')[1];
+            let isFocusMode = focusModeToggle.checked && previousCanvasState && conversationHistory.length > 0;
+            let messageContent = [];
+
+            // Get selected intent
+            const intent = intentSelect.value;
+            const intentLabels = {
+                auto: 'Détermine automatiquement ce que je veux',
+                add: 'Je veux AJOUTER cet élément au schéma',
+                modify: 'Je veux MODIFIER un élément existant',
+                delete: 'Je veux SUPPRIMER ce que j\'ai barré/raturé',
+                explain: 'Explique-moi ce que tu vois, ne génère pas de SVG'
+            };
+
+            // Build position info if we have bounds
+            let positionInfo = '';
+            if (modifiedBounds) {
+                const { minX, minY, maxX, maxY } = modifiedBounds;
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                const canvasW = canvas.width;
+                const canvasH = canvas.height;
+
+                // Describe position in human terms
+                const horizontal = centerX < canvasW * 0.33 ? 'gauche' : centerX > canvasW * 0.66 ? 'droite' : 'centre';
+                const vertical = centerY < canvasH * 0.33 ? 'haut' : centerY > canvasH * 0.66 ? 'bas' : 'milieu';
+                positionInfo = `\n📍 POSITION: J'ai dessiné en ${vertical}-${horizontal} du canvas (zone ${Math.round(minX)},${Math.round(minY)} → ${Math.round(maxX)},${Math.round(maxY)} sur ${canvasW}x${canvasH})`;
+
+                // Store for SVG injection
+                lastModifiedBounds = { ...modifiedBounds };
+            } else {
+                lastModifiedBounds = null;
+            }
+
+            if (isFocusMode) {
+                // Focus mode: send BEFORE + AFTER, let Claude compare
+                const previousImageData = previousCanvasState.split(',')[1];
+
+                messageContent = [
+                    {
+                        type: 'image',
+                        source: { type: 'base64', media_type: 'image/png', data: previousImageData }
+                    },
+                    {
+                        type: 'text',
+                        text: `[AVANT - État précédent du canvas]`
+                    },
+                    {
+                        type: 'image',
+                        source: { type: 'base64', media_type: 'image/png', data: currentImageData }
+                    },
+                    {
+                        type: 'text',
+                        text: `[APRÈS - État actuel]${positionInfo}\n\n🎯 INTENTION: ${intentLabels[intent]}\n${userContext ? `Contexte: "${userContext}"\n` : ''}\nCompare les deux images et réponds en tenant compte de mon intention.`
+                    }
+                ];
+            } else {
+                // Normal mode: full canvas
+                let userText = userContext ? `Contexte: "${userContext}"\n\n` : '';
+                userText += `🎯 INTENTION: ${intentLabels[intent]}${positionInfo}\n\nVoici mon croquis.`;
+
+                messageContent = [
+                    {
+                        type: 'image',
+                        source: { type: 'base64', media_type: 'image/png', data: currentImageData }
+                    },
+                    {
+                        type: 'text',
+                        text: userText
+                    }
+                ];
+            }
+
+            // Show sent prompt in UI
+            const intentEmoji = { auto: '🔮', add: '➕', modify: '✏️', delete: '❌', explain: '💬' };
+            let promptText = `${intentEmoji[intent]} ${intentLabels[intent]}`;
+            if (positionInfo) promptText += `\n${positionInfo}`;
+            if (userContext) promptText += `\nContexte: ${userContext}`;
+            const sentImages = isFocusMode
+                ? [previousCanvasState.split(',')[1], currentImageData]
+                : [currentImageData];
+            showSentPrompt(sentImages, promptText, isFocusMode);
+
+            // Current user message
+            const currentUserMessage = {
+                role: 'user',
+                content: messageContent
+            };
+
+            // Build messages array with history
+            const messages = [...conversationHistory, currentUserMessage];
+
+            // System prompt with learned conventions
+            const learnedConventions = JSON.parse(localStorage.getItem('inkforge_conventions') || '[]');
+            const conventionsText = learnedConventions.length > 0
+                ? `\n\nCONVENTIONS DE CET UTILISATEUR:\n${learnedConventions.map(c => `- ${c.pattern} = ${c.meaning}`).join('\n')}`
+                : '';
+
+            const systemPrompt = `Tu es un assistant de communication visuelle PROACTIF. L'utilisateur dessine, annote, rature pour communiquer avec toi.
+
+🎯 COMPORTEMENT PRINCIPAL:
+TOUJOURS générer une VERSION PROPRE en SVG, sauf si c'est juste du texte conversationnel.
+- Liste de tâches manuscrite → SVG propre avec checkboxes
+- Schéma brouillon → SVG structuré
+- Notes/brainstorm → SVG ou markdown structuré
+- Wireframe → SVG propre du UI
+
+FORMAT DE RÉPONSE (court):
+1. **🔍** (1 ligne) Ce que tu vois
+2. **🧠** (1 ligne) Ton interprétation
+3. **✏️** TON SVG ou contenu structuré (partie principale!)
+
+MÉTA-ANNOTATIONS (ne pas inclure dans le SVG):
+- Croix/rature sur élément = SUPPRIMER cet élément
+- Cercle autour = FOCUS/emphase
+- Flèche = relation ou déplacement
+${conventionsText}
+
+SVG: viewBox="0 0 400 300", fond blanc.
+Français. Concis en analyse, généreux en production.`;
+
+            try {
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 4096,
+                        system: systemPrompt,
+                        messages: messages
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error?.message || 'API Error');
+                }
+
+                const data = await res.json();
+                const text = data.content[0].text;
+
+                // Store in conversation history
+                const imageNote = isFocusMode ? '[Image: comparaison avant/après]' : '[Image: croquis complet]';
+                conversationHistory.push({
+                    role: 'user',
+                    content: userContext ? `${imageNote} Contexte: "${userContext}"` : imageNote
+                });
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: text
+                });
+
+                // Reset modified bounds and hide overlay after sending
+                modifiedBounds = null;
+                if (overlayCanvas) overlayCanvas.style.display = 'none';
+
+                // Keep only last 10 exchanges to avoid token explosion
+                if (conversationHistory.length > 20) {
+                    conversationHistory = conversationHistory.slice(-20);
+                }
+
+                updateConversationIndicator();
+
+                // Extract SVG if present
+                const svgMatch = text.match(/<svg[\s\S]*?<\/svg>/i);
+                if (svgMatch) {
+                    lastSVG = svgMatch[0];
+                }
+
+                // Parse response to separate analysis from content
+                const { analysis, mainContent } = parseClaudeResponse(text);
+                showAnalysis(analysis);
+
+                // Add to chat history
+                addToChatHistory('user', userContext || '[Image]', true);
+                addToChatHistory('assistant', text);
+
+                responseStatus.textContent = `Tokens: ${data.usage?.input_tokens || '?'} in / ${data.usage?.output_tokens || '?'} out`;
+                responseStatus.className = 'status';
+                modeIndicator.textContent = 'Ready';
+                modeIndicator.className = 'mode-indicator';
+
+                // Auto-inject SVG to canvas if present
+                if (lastSVG) {
+                    injectSVGToCanvas();
+                }
+
+            } catch (err) {
+                analysisEl.innerHTML = `<span style="color:#e94560">Erreur: ${err.message}</span>`;
+                responseStatus.textContent = 'Erreur';
+                responseStatus.className = 'status';
+                modeIndicator.textContent = 'Error';
+                modeIndicator.className = 'mode-indicator drawing';
+            }
+
+            sendBtn.disabled = false;
+        }
+
+        function injectSVGToCanvas() {
+            if (!lastSVG) {
+                alert('Pas de SVG à injecter');
+                return;
+            }
+
+            // Save current canvas state for undo
+            canvasBeforeAI = canvas.toDataURL();
+
+            // Create a blob from the SVG
+            const svgBlob = new Blob([lastSVG], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = () => {
+                if (lastModifiedBounds && focusModeToggle.checked) {
+                    // Position mode: place SVG at the modified region
+                    const { minX, minY, maxX, maxY } = lastModifiedBounds;
+                    const regionW = maxX - minX;
+                    const regionH = maxY - minY;
+
+                    // Clear only the modified region
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(minX, minY, regionW, regionH);
+
+                    // Scale SVG to fit in the region with some padding
+                    const padding = 10;
+                    const availW = regionW - padding * 2;
+                    const availH = regionH - padding * 2;
+                    const scale = Math.min(availW / img.width, availH / img.height, 1);
+
+                    const drawW = img.width * scale;
+                    const drawH = img.height * scale;
+                    const x = minX + (regionW - drawW) / 2;
+                    const y = minY + (regionH - drawH) / 2;
+
+                    ctx.drawImage(img, x, y, drawW, drawH);
+                    canvasStatus.textContent = `AI @ position (${Math.round(minX)},${Math.round(minY)})`;
+                } else {
+                    // Full mode: clear entire canvas and center SVG
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    const scale = Math.min(
+                        canvas.width / img.width,
+                        canvas.height / img.height
+                    ) * 0.9;
+
+                    const x = (canvas.width - img.width * scale) / 2;
+                    const y = (canvas.height - img.height * scale) / 2;
+
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    canvasStatus.textContent = `AI (draw over it!)`;
+                }
+
+                strokeCount = 0;
+
+                // Save this state for Focus mode comparison next time
+                previousCanvasState = canvas.toDataURL();
+
+                // Reset undo/redo state and bounds
+                isUndone = false;
+                canvasAfterAI = null;
+                lastModifiedBounds = null;
+
+                URL.revokeObjectURL(url);
+            };
+            img.onerror = () => {
+                console.error('Failed to load SVG');
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        }
+
+        function renderResponse(text) {
+            // Extract and render SVG blocks
+            const svgRegex = /<svg[\s\S]*?<\/svg>/gi;
+            let rendered = text;
+
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+
+            while ((match = svgRegex.exec(text)) !== null) {
+                if (match.index > lastIndex) {
+                    parts.push(escapeHtml(text.slice(lastIndex, match.index)));
+                }
+                parts.push(match[0]);
+                lastIndex = match.index + match[0].length;
+            }
+            if (lastIndex < text.length) {
+                parts.push(escapeHtml(text.slice(lastIndex)));
+            }
+
+            return parts.join('');
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+        }
+
+        // Save settings to localStorage
+        document.getElementById('apiKey').addEventListener('change', (e) => {
+            localStorage.setItem('inkforge_apikey', e.target.value);
+        });
+
+        autoSendToggle.addEventListener('change', (e) => {
+            localStorage.setItem('inkforge_autosend', e.target.checked);
+            if (!e.target.checked) {
+                cancelAutoSend();
+                modeIndicator.textContent = 'Ready';
+                modeIndicator.className = 'mode-indicator';
+            }
+        });
+
+        autoSendDelay.addEventListener('change', (e) => {
+            localStorage.setItem('inkforge_autosend_delay', e.target.value);
+        });
+
+        // Load settings from localStorage
+        const savedKey = localStorage.getItem('inkforge_apikey');
+        if (savedKey) {
+            document.getElementById('apiKey').value = savedKey;
+        }
+
+        const savedAutoSend = localStorage.getItem('inkforge_autosend');
+        if (savedAutoSend === 'true') {
+            autoSendToggle.checked = true;
+        }
+
+        const savedDelay = localStorage.getItem('inkforge_autosend_delay');
+        if (savedDelay) {
+            autoSendDelay.value = savedDelay;
+        }
+
+        const savedFocusMode = localStorage.getItem('inkforge_focusmode');
+        if (savedFocusMode === 'true') {
+            focusModeToggle.checked = true;
+        }
+
+        focusModeToggle.addEventListener('change', (e) => {
+            localStorage.setItem('inkforge_focusmode', e.target.checked);
+            // Show/hide debug overlay
+            drawModifiedOverlay();
+        });
+    </script>
+</body>
+</html>

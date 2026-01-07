@@ -1,59 +1,49 @@
-# InkForge - TODO
+# INKFORGE - TODO
 
-## En cours : Environnement de dev reMarkable
+## En cours : POC Visual Loop
 
-### Simulateur Docker rM2
-- [ ] Builder l'image Docker rM-docker
-- [ ] Tester le lancement de l'émulateur
-- [ ] Valider l'affichage via rm2fb-emu
+### Phase 1 : Setup
+- [ ] Commander tablette Wacom (Intuos S ou M)
+- [ ] Setup projet tldraw + React
+- [ ] Configurer Claude API (Vision)
 
-### Commandes
+### Phase 2 : Premier loop
+- [ ] Capturer le canvas tldraw → export PNG
+- [ ] Envoyer à Claude Vision
+- [ ] Afficher la réponse texte
+- [ ] Claude génère SVG → render dans le canvas
 
-**Build complet (avec affichage rm2fb) :**
-```bash
-docker build --tag rm-docker https://github.com/timower/rM-docker.git
-```
-
-**Build minimal (si échec) :**
-```bash
-docker build --target qemu-base --tag rm-docker https://github.com/timower/rM-docker.git
-```
-
-**Lancer l'émulateur :**
-```bash
-docker run --rm -v rm-data:/opt/root -p 2222:22 -p 8888:8888 -it rm-docker
-```
-
-**Connexion SSH :**
-```bash
-ssh root@localhost -p 2222
-# pas de mot de passe
-```
-
-### Ressources
-- [rM-docker](https://github.com/timower/rM-docker) - Émulateur utilisé
-- [remarkable-simulation](https://github.com/monsterstreet/remarkable-simulation) - Alternative minimale
-- [rmkit](https://rmkit.dev/) - Framework pour dev apps rM
+### Phase 3 : Conversation
+- [ ] Multi-turn (historique des échanges)
+- [ ] Annotations sur les réponses de Claude
+- [ ] Modes de conversation (brainstorm, design, archi)
 
 ---
 
 ## Backlog
 
-### Axe 1 : INPUT (Croquis → Code)
-- [ ] Intégrer Claude Vision pour analyser les dessins
-- [ ] Créer les prompts pour UML → Code, Wireframe → UI, etc.
+### Hardware
+- [ ] Intégration Wacom native (pressure/tilt)
+- [ ] Test iPad + Apple Pencil (via web)
+- [ ] Adapter pour reMarkable (optional)
 
-### Axe 2 : APPS (Dev pour rM)
-- [ ] Tester rmkit sur l'émulateur
-- [ ] Créer une app hello world
+### Features
+- [ ] Templates de conversation
+- [ ] Export sessions (PDF, PNG)
+- [ ] Historique persistant
 
-### Axe 3 : OUTPUT (Claude → SVG)
-- [ ] Pipeline SVG → PNG/PDF → reMarkable
+### Infra
+- [ ] Décider : tldraw watermark vs licence vs custom canvas
+- [ ] CI/CD si app desktop (Electron/Tauri)
 
-### Axe 4 : THINKING (Réflexion assistée)
-- [ ] Workflow capture notes → Claude → retour annoté
+### Auth & API (important UX)
+- [ ] Détecter OAuth Claude Code existant (~/.claude/)
+- [ ] Détecter ANTHROPIC_API_KEY dans l'environnement
+- [ ] Support des clés API manuelles (fallback)
+- [ ] Zéro friction : l'utilisateur ne devrait pas avoir à créer de compte supplémentaire
 
-### Axe 5 : HUB (Supervision multi-instances)
-- [ ] Architecture broker WebSocket
-- [ ] Client reMarkable
-- [ ] Client Android
+---
+
+## Notes
+
+**Pivot 2025-01** : Focus sur la boucle visuelle bidirectionnelle, hardware-agnostic. reMarkable devient un target optionnel, pas le centre du projet.
