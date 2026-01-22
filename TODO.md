@@ -1,25 +1,31 @@
 # INKFORGE - TODO
 
-## En cours : POC Visual Loop
+## En cours : INKFORGE Lite
 
-### Phase 1 : Setup ✅
-- [x] Setup canvas HTML5 (sans tldraw pour l'instant)
-- [x] Configurer Claude API (Vision)
-- [ ] Commander tablette Wacom (Intuos S ou M)
+### Phase 5 : Standalone Canvas ✅
+- [x] Canvas standalone avec API HTTP (Flask + pywebview)
+- [x] Interface frameless minimaliste
+- [x] 3 LEDs status (connecté, modifié, zones toggle)
+- [x] Dessin : clic gauche/droit, molette pour taille
+- [x] Auto-inject SVG depuis API /draw
+- [x] Visual loop bidirectionnelle fonctionnelle
+- [x] Window drag sur titlebar custom
 
-### Phase 2 : Premier loop ✅
-- [x] Capturer le canvas → export PNG
-- [x] Envoyer à Claude Vision
-- [x] Afficher la réponse texte
-- [x] Claude génère SVG → render dans le canvas
-- [x] Auto-send avec debounce
-- [x] Position tracking + injection positionnée
+### Phase 6 : Intégration Claude Code 🔜
+- [ ] MCP server pour exposer les endpoints à Claude
+- [ ] Commande `/sketch` pour ouvrir INKFORGE Lite
+- [ ] Claude peut voir le canvas et répondre en SVG
+- [ ] Workflow : sketch → analyse → code generation
 
-### Phase 3 : Conversation ✅
-- [x] Multi-turn (historique des échanges)
-- [x] Apprentissage des conventions utilisateur
-- [x] Sélecteur d'intention (ajouter/modifier/supprimer/expliquer)
-- [x] UI 3 panneaux (prompt envoyé, analyse, chat)
+---
+
+## Historique POC
+
+### Phase 1-3 : Visual Loop POC ✅
+- Setup canvas HTML5 + Claude Vision
+- Capture → envoi → réponse SVG
+- Multi-turn, conventions, intentions
+- UI 3 panneaux
 
 ### Phase 4 : Architecture & Concepts 🔜
 - [ ] **Séparer les couches conceptuelles :**

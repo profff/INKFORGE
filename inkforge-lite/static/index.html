@@ -32,14 +32,22 @@
             flex-direction: column;
         }
 
+        .window-frame {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-color);
+            overflow: hidden;
+        }
+
         /* Frameless window drag area */
         .drag-area {
-            height: 32px;
+            height: 36px;
             background: var(--surface-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 12px;
+            padding: 0 14px;
             -webkit-app-region: drag;
         }
 
@@ -92,6 +100,69 @@
 
         .led.clickable:hover {
             transform: scale(1.2);
+        }
+
+        /* Hamburger menu */
+        .menu-container {
+            position: relative;
+        }
+
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            cursor: pointer;
+            padding: 4px;
+            margin-right: 10px;
+        }
+
+        .hamburger span {
+            width: 16px;
+            height: 2px;
+            background: #888;
+            border-radius: 1px;
+            transition: background 0.2s;
+        }
+
+        .hamburger:hover span {
+            background: var(--accent-color);
+        }
+
+        .dropdown {
+            display: none;
+            position: absolute;
+            top: 28px;
+            left: 0;
+            background: var(--surface-color);
+            border: 1px solid #333;
+            border-radius: 6px;
+            min-width: 140px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .dropdown.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #ccc;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(20, 184, 166, 0.2);
+            color: white;
+        }
+
+        .dropdown-separator {
+            height: 1px;
+            background: #333;
+            margin: 4px 0;
         }
 
         /* Window buttons */
@@ -211,11 +282,126 @@
         .cursor-erase {
             cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="none" stroke="%23ff6b6b" stroke-width="2"/></svg>') 10 10, crosshair;
         }
+
+        /* Radial menu component */
+        .radial-menu {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            z-index: 50;
+        }
+
+        .radial-menu svg {
+            position: absolute;
+            width: var(--expanded-size, 160px);
+            height: var(--expanded-size, 160px);
+            pointer-events: none;
+        }
+
+        .radial-menu .cell {
+            opacity: 0;
+            transform-origin: var(--origin-x, 100%) var(--origin-y, 100%);
+            transition: opacity 0.3s ease, transform 0.3s ease, filter 0.15s ease;
+            pointer-events: none;
+        }
+
+        .radial-menu:hover .cell {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .radial-menu .cell:hover {
+            filter: brightness(1.3);
+        }
+
+        /* Animation: fan (éventail) - all at once */
+        .radial-menu.anim-fan .cell {
+            transform: scale(0);
+        }
+        .radial-menu.anim-fan:hover .cell {
+            transform: scale(1);
+        }
+
+        /* Animation: push-pull out (intérieur vers extérieur) */
+        .radial-menu.anim-push-out .cell {
+            transform: scale(0);
+        }
+        .radial-menu.anim-push-out:hover .cell {
+            transform: scale(1);
+        }
+        .radial-menu.anim-push-out .cell[data-ring="0"] { transition-delay: 0ms; }
+        .radial-menu.anim-push-out .cell[data-ring="1"] { transition-delay: 50ms; }
+        .radial-menu.anim-push-out .cell[data-ring="2"] { transition-delay: 100ms; }
+        .radial-menu.anim-push-out .cell[data-ring="3"] { transition-delay: 150ms; }
+
+        /* Animation: push-pull in (extérieur vers intérieur) */
+        .radial-menu.anim-push-in .cell {
+            transform: scale(0);
+        }
+        .radial-menu.anim-push-in:hover .cell {
+            transform: scale(1);
+        }
+        .radial-menu.anim-push-in .cell[data-ring="0"] { transition-delay: 150ms; }
+        .radial-menu.anim-push-in .cell[data-ring="1"] { transition-delay: 100ms; }
+        .radial-menu.anim-push-in .cell[data-ring="2"] { transition-delay: 50ms; }
+        .radial-menu.anim-push-in .cell[data-ring="3"] { transition-delay: 0ms; }
+
+        .radial-menu-indicator {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.5);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        /* Corner positions */
+        .radial-menu.bottom-right {
+            bottom: 0;
+            right: 0;
+        }
+        .radial-menu.bottom-right svg {
+            bottom: 0;
+            right: 0;
+        }
+        .radial-menu.bottom-right .radial-menu-indicator {
+            bottom: 8px;
+            right: 8px;
+        }
+
+        .radial-menu.bottom-left {
+            bottom: 0;
+            left: 0;
+        }
+        .radial-menu.bottom-left svg {
+            bottom: 0;
+            left: 0;
+        }
+        .radial-menu.bottom-left .radial-menu-indicator {
+            bottom: 8px;
+            left: 8px;
+        }
     </style>
 </head>
 <body>
+<div class="window-frame">
     <!-- Drag area for frameless window -->
     <div class="drag-area">
+        <div class="menu-container">
+            <div class="hamburger" id="menuBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="dropdown" id="dropdown">
+                <div class="dropdown-item" onclick="saveAs()">Save as...</div>
+                <div class="dropdown-separator"></div>
+                <div class="dropdown-item" onclick="clearCanvas()">Clear</div>
+            </div>
+        </div>
         <span class="logo">INKFORGE LITE</span>
 
         <div class="window-controls">
@@ -250,7 +436,13 @@
 
         <!-- Watermark -->
         <div class="watermark">127.0.0.1:8765</div>
+
+        <!-- Color picker (radial menu) -->
+        <div class="radial-menu bottom-right" id="colorPicker" style="--expanded-size: 160px;">
+            <div class="radial-menu-indicator" id="colorIndicator"></div>
+        </div>
     </div>
+</div>
 
     <script>
         // Constants
@@ -274,6 +466,7 @@
         let isDrawing = false;
         let isErasing = false;
         let brushSize = 3;
+        let brushColor = '#ffffff';
         let lastX = 0;
         let lastY = 0;
         let showZones = false;
@@ -284,6 +477,7 @@
         let svgVersion = 0;
         let connected = false;
         let modified = false;
+
 
         // Initialize
         function init() {
@@ -341,6 +535,16 @@
             if (historyIndex > 0) {
                 historyIndex--;
                 loadHistoryState();
+                // Update modified state
+                if (historyIndex === 0) {
+                    modified = false;
+                    regions = [];
+                    ledModified.classList.remove('warning');
+                    renderRegions();
+                } else if (regions.length > 0) {
+                    regions.pop();
+                    renderRegions();
+                }
             }
         }
 
@@ -348,6 +552,8 @@
             if (historyIndex < history.length - 1) {
                 historyIndex++;
                 loadHistoryState();
+                modified = true;
+                ledModified.classList.add('warning');
             }
         }
 
@@ -390,7 +596,7 @@
                 ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
                 ctx.lineWidth = brushSize * ERASER_MULTIPLIER;
             } else {
-                ctx.strokeStyle = '#ffffff';
+                ctx.strokeStyle = brushColor;
                 ctx.lineWidth = brushSize;
             }
 
@@ -601,6 +807,33 @@
             }
         }
 
+        // Menu dropdown
+        const menuBtn = document.getElementById('menuBtn');
+        const dropdown = document.getElementById('dropdown');
+
+        menuBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            dropdown.classList.toggle('show');
+        });
+
+        document.addEventListener('click', () => {
+            dropdown.classList.remove('show');
+        });
+
+        async function saveAs() {
+            dropdown.classList.remove('show');
+            const dataUrl = canvas.toDataURL('image/png');
+            if (window.pywebview) {
+                window.pywebview.api.save_file(dataUrl.split(',')[1]);
+            } else {
+                // Fallback: download link
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = 'inkforge-sketch.png';
+                a.click();
+            }
+        }
+
         // Window drag
         let isDragging = false;
         let dragStartX = 0;
@@ -657,6 +890,172 @@
                 clearCanvas();
             }
         });
+
+        /**
+         * RadialMenu - Composant de menu radial en quart de cercle
+         * @param {Object} config
+         * @param {HTMLElement} config.container - Element conteneur
+         * @param {string} config.corner - 'bottom-right', 'bottom-left', 'top-right', 'top-left'
+         * @param {number} config.size - Taille déployée en px
+         * @param {string} config.animation - 'fan', 'push-out', 'push-in'
+         * @param {Array} config.rings - Tableau d'anneaux, chaque anneau = { divisions: [...] }
+         *   division = { color?, icon?, label?, action: function }
+         */
+        class RadialMenu {
+            constructor(config) {
+                this.container = config.container;
+                this.corner = config.corner || 'bottom-right';
+                this.size = config.size || 160;
+                this.animation = config.animation || 'fan';
+                this.rings = config.rings || [];
+
+                this.container.classList.add(`anim-${this.animation}`);
+                this.container.style.setProperty('--expanded-size', this.size + 'px');
+
+                // Set transform origin based on corner
+                const origins = {
+                    'bottom-right': { x: '100%', y: '100%' },
+                    'bottom-left': { x: '0%', y: '100%' },
+                    'top-right': { x: '100%', y: '0%' },
+                    'top-left': { x: '0%', y: '0%' }
+                };
+                const origin = origins[this.corner];
+                this.container.style.setProperty('--origin-x', origin.x);
+                this.container.style.setProperty('--origin-y', origin.y);
+
+                this.render();
+            }
+
+            pointOnCircle(cx, cy, radius, angleDeg) {
+                const angleRad = (angleDeg * Math.PI) / 180;
+                return {
+                    x: cx + radius * Math.cos(angleRad),
+                    y: cy + radius * Math.sin(angleRad)
+                };
+            }
+
+            createCellPath(cx, cy, innerR, outerR, startAngle, endAngle) {
+                // Pour le premier anneau, on part du centre
+                if (innerR === 0) {
+                    const p2 = this.pointOnCircle(cx, cy, outerR, startAngle);
+                    const p3 = this.pointOnCircle(cx, cy, outerR, endAngle);
+                    const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+                    return `M ${cx},${cy} L ${p2.x},${p2.y} A ${outerR},${outerR} 0 ${largeArc},1 ${p3.x},${p3.y} Z`;
+                }
+
+                const p1 = this.pointOnCircle(cx, cy, innerR, startAngle);
+                const p2 = this.pointOnCircle(cx, cy, outerR, startAngle);
+                const p3 = this.pointOnCircle(cx, cy, outerR, endAngle);
+                const p4 = this.pointOnCircle(cx, cy, innerR, endAngle);
+                const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+
+                return `M ${p1.x},${p1.y} L ${p2.x},${p2.y} A ${outerR},${outerR} 0 ${largeArc},1 ${p3.x},${p3.y} L ${p4.x},${p4.y} A ${innerR},${innerR} 0 ${largeArc},0 ${p1.x},${p1.y} Z`;
+            }
+
+            getAngleRange() {
+                switch (this.corner) {
+                    case 'bottom-right': return { start: 180, end: 270, cx: 100, cy: 100 };
+                    case 'bottom-left': return { start: 270, end: 360, cx: 0, cy: 100 };
+                    case 'top-right': return { start: 90, end: 180, cx: 100, cy: 0 };
+                    case 'top-left': return { start: 0, end: 90, cx: 0, cy: 0 };
+                    default: return { start: 180, end: 270, cx: 100, cy: 100 };
+                }
+            }
+
+            setAnimation(anim) {
+                this.container.classList.remove(`anim-${this.animation}`);
+                this.animation = anim;
+                this.container.classList.add(`anim-${this.animation}`);
+            }
+
+            render() {
+                const { start, end, cx, cy } = this.getAngleRange();
+                const totalAngle = end - start;
+                const numRings = this.rings.length;
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 100 100');
+
+                this.rings.forEach((ring, ringIndex) => {
+                    const innerR = (ringIndex / numRings) * 100;
+                    const outerR = ((ringIndex + 1) / numRings) * 100;
+                    const divisions = ring.divisions;
+                    const anglePerDiv = totalAngle / divisions.length;
+
+                    divisions.forEach((div, divIndex) => {
+                        const startAngle = start + divIndex * anglePerDiv;
+                        const endAngle = start + (divIndex + 1) * anglePerDiv;
+
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        path.setAttribute('d', this.createCellPath(cx, cy, innerR, outerR, startAngle, endAngle));
+                        path.setAttribute('fill', div.color || '#444');
+                        path.setAttribute('class', 'cell');
+                        path.setAttribute('data-ring', ringIndex);
+                        path.style.cursor = 'pointer';
+
+                        if (div.action) {
+                            path.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                div.action(div, e);
+                            });
+                        }
+
+                        svg.appendChild(path);
+                    });
+                });
+
+                this.container.insertBefore(svg, this.container.firstChild);
+            }
+        }
+
+        // Helper: génère une palette de couleurs avec dégradés
+        function generateColorPalette(baseHues, rings = 4) {
+            const palette = [];
+            for (let r = 0; r < rings; r++) {
+                const lightness = 25 + (r * 15); // 25%, 40%, 55%, 70%
+                const saturation = 100 - (r * 10); // 100%, 90%, 80%, 70%
+                palette.push({
+                    divisions: baseHues.map(hue => ({
+                        color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
+                        hue, saturation, lightness
+                    }))
+                });
+            }
+            return palette;
+        }
+
+        // Color picker avec RadialMenu - 4 étages avec dégradés
+        const colorIndicator = document.getElementById('colorIndicator');
+
+        function updateColorIndicator() {
+            colorIndicator.style.background = brushColor;
+        }
+
+        // Teintes de base (8 couleurs)
+        const baseHues = [0, 30, 60, 120, 180, 210, 270, 320];
+
+        // Génère la palette avec 4 anneaux
+        const colorRings = generateColorPalette(baseHues, 4);
+
+        // Ajoute les actions à chaque cellule
+        colorRings.forEach(ring => {
+            ring.divisions.forEach(div => {
+                div.action = (d) => {
+                    brushColor = d.color;
+                    updateColorIndicator();
+                };
+            });
+        });
+
+        const colorPicker = new RadialMenu({
+            container: document.getElementById('colorPicker'),
+            corner: 'bottom-right',
+            size: 180,
+            animation: 'push-out', // 'fan', 'push-out', 'push-in'
+            rings: colorRings
+        });
+
+        updateColorIndicator();
 
         // Initialize on load
         window.addEventListener('load', init);

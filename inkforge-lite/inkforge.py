@@ -217,6 +217,23 @@ class Api:
         if self._window:
             self._window.move(self._window.x + dx, self._window.y + dy)
 
+    def save_file(self, base64_data):
+        """Open save dialog and save PNG."""
+        import webview
+        if self._window:
+            result = self._window.create_file_dialog(
+                webview.SAVE_DIALOG,
+                save_filename='inkforge-sketch.png',
+                file_types=('PNG Files (*.png)',)
+            )
+            if result:
+                import base64
+                filepath = result if isinstance(result, str) else result[0]
+                with open(filepath, 'wb') as f:
+                    f.write(base64.b64decode(base64_data))
+                return True
+        return False
+
 
 def run_flask(port):
     """Run Flask server in a thread."""
