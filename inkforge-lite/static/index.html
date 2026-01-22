@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INKFORGE Lite</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --surface-color: #16213e;
+            --accent-color: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.6);
+            --warning-color: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Frameless window drag area */
+        .drag-area {
+            height: 32px;
+            background: var(--surface-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            -webkit-app-region: drag;
+        }
+
+        .drag-area * {
+            -webkit-app-region: no-drag;
+        }
+
+        .logo {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-color);
+            letter-spacing: 1px;
+        }
+
+        .window-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* LED indicators */
+        .leds {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 12px;
+        }
+
+        .led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            transition: all 0.3s ease;
+        }
+
+        .led.active {
+            background: var(--accent-color);
+            box-shadow: 0 0 8px var(--accent-glow), 0 0 16px var(--accent-glow);
+        }
+
+        .led.warning {
+            background: var(--warning-color);
+            box-shadow: 0 0 8px var(--warning-glow), 0 0 16px var(--warning-glow);
+        }
+
+        .led.clickable {
+            cursor: pointer;
+        }
+
+        .led.clickable:hover {
+            transform: scale(1.2);
+        }
+
+        /* Window buttons */
+        .win-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .win-btn:hover {
+            opacity: 0.8;
+        }
+
+        .win-btn.minimize {
+            background: #f59e0b;
+        }
+
+        .win-btn.maximize {
+            background: #22c55e;
+        }
+
+        .win-btn.close {
+            background: #ef4444;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Canvas container */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #drawCanvas {
+            background: var(--bg-color);
+            cursor: crosshair;
+            border-radius: 4px;
+        }
+
+        /* Brush size bar */
+        .brush-bar {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .brush-bar-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: var(--accent-color);
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        .brush-bar-indicator {
+            position: absolute;
+            right: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        /* Regions overlay */
+        .regions-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .region-rect {
+            position: absolute;
+            border: 1px dashed var(--accent-color);
+            background: rgba(20, 184, 166, 0.05);
+            border-radius: 2px;
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+            pointer-events: none;
+        }
+
+        /* Cursor styles */
+        .cursor-draw {
+            cursor: crosshair;
+        }
+
+        .cursor-erase {
+            cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="none" stroke="%23ff6b6b" stroke-width="2"/></svg>') 10 10, crosshair;
+        }
+    </style>
+</head>
+<body>
+    <!-- Drag area for frameless window -->
+    <div class="drag-area">
+        <span class="logo">INKFORGE LITE</span>
+
+        <div class="window-controls">
+            <!-- LED indicators -->
+            <div class="leds">
+                <div class="led" id="ledConnected" title="Connexion"></div>
+                <div class="led" id="ledModified" title="Modifié"></div>
+                <div class="led clickable" id="ledZones" title="Afficher zones (clic pour toggle)"></div>
+            </div>
+
+            <!-- Window buttons -->
+            <button class="win-btn minimize" onclick="minimizeWindow()" title="Réduire"></button>
+            <button class="win-btn maximize" onclick="maximizeWindow()" title="Agrandir"></button>
+            <button class="win-btn close" onclick="closeWindow()" title="Fermer"></button>
+        </div>
+    </div>
+
+    <!-- Main canvas area -->
+    <div class="main">
+        <div class="canvas-container" id="canvasContainer">
+            <canvas id="drawCanvas"></canvas>
+
+            <!-- Regions overlay -->
+            <div class="regions-overlay" id="regionsOverlay"></div>
+        </div>
+
+        <!-- Brush size bar -->
+        <div class="brush-bar" title="Taille (molette)">
+            <div class="brush-bar-fill" id="brushBarFill"></div>
+        </div>
+        <div class="brush-bar-indicator" id="brushIndicator">3</div>
+
+        <!-- Watermark -->
+        <div class="watermark">127.0.0.1:8765</div>
+    </div>
+
+    <script>
+        // Constants
+        const API_BASE = 'http://127.0.0.1:8765';
+        const ERASER_MULTIPLIER = 5;
+        const MIN_BRUSH = 1;
+        const MAX_BRUSH = 20;
+
+        // DOM elements
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const regionsOverlay = document.getElementById('regionsOverlay');
+        const brushBarFill = document.getElementById('brushBarFill');
+        const brushIndicator = document.getElementById('brushIndicator');
+        const ledConnected = document.getElementById('ledConnected');
+        const ledModified = document.getElementById('ledModified');
+        const ledZones = document.getElementById('ledZones');
+
+        // State
+        let isDrawing = false;
+        let isErasing = false;
+        let brushSize = 3;
+        let lastX = 0;
+        let lastY = 0;
+        let showZones = false;
+        let regions = [];
+        let currentRegion = { minX: null, minY: null, maxX: null, maxY: null };
+        let history = [];
+        let historyIndex = -1;
+        let svgVersion = 0;
+        let connected = false;
+        let modified = false;
+
+        // Initialize
+        function init() {
+            resizeCanvas();
+            updateBrushBar();
+            startPolling();
+            window.addEventListener('resize', resizeCanvas);
+
+            // LED zones toggle
+            ledZones.addEventListener('click', () => {
+                showZones = !showZones;
+                ledZones.classList.toggle('active', showZones);
+                renderRegions();
+            });
+        }
+
+        function resizeCanvas() {
+            const container = canvasContainer;
+            const padding = 40;
+            const maxW = container.clientWidth - padding * 2;
+            const maxH = container.clientHeight - padding * 2;
+
+            // Maintain 4:3 aspect ratio
+            const ratio = 4 / 3;
+            let w = maxW;
+            let h = w / ratio;
+
+            if (h > maxH) {
+                h = maxH;
+                w = h * ratio;
+            }
+
+            canvas.width = w;
+            canvas.height = h;
+
+            // Fill with background color
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            saveHistory();
+        }
+
+        // History management
+        function saveHistory() {
+            history = history.slice(0, historyIndex + 1);
+            history.push(canvas.toDataURL());
+            historyIndex = history.length - 1;
+            if (history.length > 50) {
+                history.shift();
+                historyIndex--;
+            }
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                loadHistoryState();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                loadHistoryState();
+            }
+        }
+
+        function loadHistoryState() {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                syncSnapshot();
+            };
+            img.src = history[historyIndex];
+        }
+
+        // Drawing
+        function startDrawing(e) {
+            isDrawing = true;
+            isErasing = e.button === 2;
+
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+
+            canvas.className = isErasing ? 'cursor-erase' : 'cursor-draw';
+            resetCurrentRegion();
+            updateCurrentRegion(lastX, lastY);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+
+            if (isErasing) {
+                ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
+                ctx.lineWidth = brushSize * ERASER_MULTIPLIER;
+            } else {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = brushSize;
+            }
+
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            updateCurrentRegion(x, y);
+            lastX = x;
+            lastY = y;
+        }
+
+        function stopDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            if (currentRegion.minX !== null) {
+                const region = {
+                    x: Math.round(currentRegion.minX),
+                    y: Math.round(currentRegion.minY),
+                    w: Math.round(currentRegion.maxX - currentRegion.minX),
+                    h: Math.round(currentRegion.maxY - currentRegion.minY)
+                };
+                regions.push(region);
+                modified = true;
+                ledModified.classList.add('warning');
+
+                // Sync with backend
+                syncRegion(region);
+                saveHistory();
+                syncSnapshot();
+                renderRegions();
+            }
+
+            resetCurrentRegion();
+            canvas.className = 'cursor-draw';
+        }
+
+        function resetCurrentRegion() {
+            currentRegion = { minX: null, minY: null, maxX: null, maxY: null };
+        }
+
+        function updateCurrentRegion(x, y) {
+            const margin = brushSize * (isErasing ? ERASER_MULTIPLIER : 1) + 5;
+            if (currentRegion.minX === null) {
+                currentRegion.minX = x - margin;
+                currentRegion.minY = y - margin;
+                currentRegion.maxX = x + margin;
+                currentRegion.maxY = y + margin;
+            } else {
+                currentRegion.minX = Math.max(0, Math.min(currentRegion.minX, x - margin));
+                currentRegion.minY = Math.max(0, Math.min(currentRegion.minY, y - margin));
+                currentRegion.maxX = Math.min(canvas.width, Math.max(currentRegion.maxX, x + margin));
+                currentRegion.maxY = Math.min(canvas.height, Math.max(currentRegion.maxY, y + margin));
+            }
+        }
+
+        // Brush size
+        function adjustBrushSize(delta) {
+            brushSize = Math.max(MIN_BRUSH, Math.min(MAX_BRUSH, brushSize + delta));
+            updateBrushBar();
+        }
+
+        function updateBrushBar() {
+            const percent = ((brushSize - MIN_BRUSH) / (MAX_BRUSH - MIN_BRUSH)) * 100;
+            brushBarFill.style.height = percent + '%';
+            brushIndicator.textContent = brushSize;
+            brushIndicator.style.bottom = `calc(50% - 100px + ${percent * 2}px)`;
+        }
+
+        // Regions rendering
+        function renderRegions() {
+            regionsOverlay.innerHTML = '';
+            if (!showZones) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const containerRect = canvasContainer.getBoundingClientRect();
+            const offsetX = rect.left - containerRect.left;
+            const offsetY = rect.top - containerRect.top;
+
+            regions.forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'region-rect';
+                div.style.left = (offsetX + r.x) + 'px';
+                div.style.top = (offsetY + r.y) + 'px';
+                div.style.width = r.w + 'px';
+                div.style.height = r.h + 'px';
+                regionsOverlay.appendChild(div);
+            });
+        }
+
+        // API communication
+        async function syncSnapshot() {
+            const currentB64 = canvas.toDataURL('image/png').split(',')[1];
+            try {
+                await fetch(`${API_BASE}/snapshot`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current: currentB64 })
+                });
+            } catch (e) {
+                console.error('Failed to sync snapshot:', e);
+            }
+        }
+
+        async function syncRegion(region) {
+            try {
+                await fetch(`${API_BASE}/region`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(region)
+                });
+            } catch (e) {
+                console.error('Failed to sync region:', e);
+            }
+        }
+
+        async function clearCanvas() {
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            regions = [];
+            modified = false;
+            ledModified.classList.remove('warning');
+            renderRegions();
+            saveHistory();
+
+            try {
+                await fetch(`${API_BASE}/clear`, { method: 'POST' });
+            } catch (e) {
+                console.error('Failed to clear backend:', e);
+            }
+        }
+
+        // Polling for SVG updates
+        function startPolling() {
+            setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/svg`);
+                    const data = await res.json();
+
+                    if (data.svg && data.version > svgVersion) {
+                        svgVersion = data.version;
+                        autoInjectSvg(data.svg);
+                    }
+
+                    connected = true;
+                    ledConnected.classList.add('active');
+                } catch (e) {
+                    connected = false;
+                    ledConnected.classList.remove('active');
+                }
+            }, 500);
+        }
+
+        // Auto-inject SVG
+        function autoInjectSvg(svg) {
+            const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = () => {
+                // Clear canvas
+                ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Scale and center
+                const scale = Math.min(
+                    canvas.width / img.width,
+                    canvas.height / img.height
+                ) * 0.9;
+
+                const x = (canvas.width - img.width * scale) / 2;
+                const y = (canvas.height - img.height * scale) / 2;
+
+                ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+                URL.revokeObjectURL(url);
+                saveHistory();
+                syncSnapshot();
+
+                // Reset state
+                regions = [];
+                modified = false;
+                ledModified.classList.remove('warning');
+                renderRegions();
+            };
+            img.src = url;
+        }
+
+        // Window controls
+        function minimizeWindow() {
+            if (window.pywebview) {
+                window.pywebview.api.minimize();
+            }
+        }
+
+        function maximizeWindow() {
+            if (window.pywebview) {
+                window.pywebview.api.maximize();
+            }
+        }
+
+        function closeWindow() {
+            if (window.pywebview) {
+                window.pywebview.api.close();
+            } else {
+                window.close();
+            }
+        }
+
+        // Window drag
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        const dragArea = document.querySelector('.drag-area');
+
+        dragArea.addEventListener('mousedown', e => {
+            // Only drag on the drag area itself, not on buttons/LEDs
+            if (e.target === dragArea || e.target.classList.contains('logo')) {
+                isDragging = true;
+                dragStartX = e.screenX;
+                dragStartY = e.screenY;
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (isDragging && window.pywebview) {
+                const dx = e.screenX - dragStartX;
+                const dy = e.screenY - dragStartY;
+                dragStartX = e.screenX;
+                dragStartY = e.screenY;
+                window.pywebview.api.move_window(dx, dy);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Event listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Mouse wheel for brush size
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            adjustBrushSize(e.deltaY > 0 ? -1 : 1);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            } else if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            } else if (e.key === 'Delete' || e.key === 'Escape') {
+                clearCanvas();
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
