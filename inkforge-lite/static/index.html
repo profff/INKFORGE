@@ -102,67 +102,14 @@
             transform: scale(1.2);
         }
 
-        /* Hamburger menu */
-        .menu-container {
-            position: relative;
-        }
-
-        .hamburger {
+        /* File menu indicator */
+        #fileIndicator {
             display: flex;
-            flex-direction: column;
-            gap: 3px;
-            cursor: pointer;
-            padding: 4px;
-            margin-right: 10px;
-        }
-
-        .hamburger span {
-            width: 16px;
-            height: 2px;
-            background: #888;
-            border-radius: 1px;
-            transition: background 0.2s;
-        }
-
-        .hamburger:hover span {
-            background: var(--accent-color);
-        }
-
-        .dropdown {
-            display: none;
-            position: absolute;
-            top: 28px;
-            left: 0;
-            background: var(--surface-color);
-            border: 1px solid #333;
-            border-radius: 6px;
-            min-width: 140px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            z-index: 100;
-            overflow: hidden;
-        }
-
-        .dropdown.show {
-            display: block;
-        }
-
-        .dropdown-item {
-            padding: 10px 14px;
+            align-items: center;
+            justify-content: center;
             font-size: 12px;
-            color: #ccc;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .dropdown-item:hover {
-            background: rgba(20, 184, 166, 0.2);
-            color: white;
-        }
-
-        .dropdown-separator {
-            height: 1px;
-            background: #333;
-            margin: 4px 0;
+            color: #aaa;
+            background: var(--surface-color) !important;
         }
 
         /* Window buttons */
@@ -206,12 +153,12 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            padding: 4px;
         }
 
         #drawCanvas {
             background: var(--bg-color);
             cursor: crosshair;
-            border-radius: 4px;
         }
 
         /* Brush size bar */
@@ -364,8 +311,8 @@
             right: 0;
         }
         .radial-menu.bottom-right svg {
-            bottom: 0;
-            right: 0;
+            bottom: 18px;
+            right: 18px;
         }
         .radial-menu.bottom-right .radial-menu-indicator {
             bottom: 8px;
@@ -384,24 +331,43 @@
             bottom: 8px;
             left: 8px;
         }
+
+        .radial-menu.top-left {
+            top: 8px;
+            left: 8px;
+        }
+        .radial-menu.top-left svg {
+            top: 10px;
+            left: 10px;
+        }
+        .radial-menu.top-left .radial-menu-indicator {
+            top: 0;
+            left: 0;
+        }
+
+        /* Hide icons when not hovered */
+        .radial-menu .cell-icon {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .radial-menu:hover .cell-icon {
+            opacity: 1;
+        }
+
+        /* Cell with icon/text */
+        .radial-menu .cell-icon {
+            font-size: 10px;
+            fill: white;
+            pointer-events: none;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
     </style>
 </head>
 <body>
 <div class="window-frame">
     <!-- Drag area for frameless window -->
     <div class="drag-area">
-        <div class="menu-container">
-            <div class="hamburger" id="menuBtn">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-            <div class="dropdown" id="dropdown">
-                <div class="dropdown-item" onclick="saveAs()">Save as...</div>
-                <div class="dropdown-separator"></div>
-                <div class="dropdown-item" onclick="clearCanvas()">Clear</div>
-            </div>
-        </div>
         <span class="logo">INKFORGE LITE</span>
 
         <div class="window-controls">
@@ -421,6 +387,11 @@
 
     <!-- Main canvas area -->
     <div class="main">
+        <!-- File menu (radial top-left) -->
+        <div class="radial-menu top-left" id="fileMenu" style="--expanded-size: 140px;">
+            <div class="radial-menu-indicator" id="fileIndicator" style="background: #555;">☰</div>
+        </div>
+
         <div class="canvas-container" id="canvasContainer">
             <canvas id="drawCanvas"></canvas>
 
@@ -495,23 +466,9 @@
         }
 
         function resizeCanvas() {
-            const container = canvasContainer;
-            const padding = 40;
-            const maxW = container.clientWidth - padding * 2;
-            const maxH = container.clientHeight - padding * 2;
-
-            // Maintain 4:3 aspect ratio
-            const ratio = 4 / 3;
-            let w = maxW;
-            let h = w / ratio;
-
-            if (h > maxH) {
-                h = maxH;
-                w = h * ratio;
-            }
-
-            canvas.width = w;
-            canvas.height = h;
+            // Fixed canvas size
+            canvas.width = 800;
+            canvas.height = 600;
 
             // Fill with background color
             ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
@@ -807,21 +764,8 @@
             }
         }
 
-        // Menu dropdown
-        const menuBtn = document.getElementById('menuBtn');
-        const dropdown = document.getElementById('dropdown');
-
-        menuBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            dropdown.classList.toggle('show');
-        });
-
-        document.addEventListener('click', () => {
-            dropdown.classList.remove('show');
-        });
-
+        // Save function
         async function saveAs() {
-            dropdown.classList.remove('show');
             const dataUrl = canvas.toDataURL('image/png');
             if (window.pywebview) {
                 window.pywebview.api.save_file(dataUrl.split(',')[1]);
@@ -897,6 +841,7 @@
          * @param {HTMLElement} config.container - Element conteneur
          * @param {string} config.corner - 'bottom-right', 'bottom-left', 'top-right', 'top-left'
          * @param {number} config.size - Taille déployée en px
+         * @param {number} config.innerRadius - Rayon minimum (trou central) en % (0-100)
          * @param {string} config.animation - 'fan', 'push-out', 'push-in'
          * @param {Array} config.rings - Tableau d'anneaux, chaque anneau = { divisions: [...] }
          *   division = { color?, icon?, label?, action: function }
@@ -906,6 +851,7 @@
                 this.container = config.container;
                 this.corner = config.corner || 'bottom-right';
                 this.size = config.size || 160;
+                this.innerRadius = config.innerRadius || 15; // % du rayon total pour le trou central
                 this.animation = config.animation || 'fan';
                 this.rings = config.rings || [];
 
@@ -935,14 +881,6 @@
             }
 
             createCellPath(cx, cy, innerR, outerR, startAngle, endAngle) {
-                // Pour le premier anneau, on part du centre
-                if (innerR === 0) {
-                    const p2 = this.pointOnCircle(cx, cy, outerR, startAngle);
-                    const p3 = this.pointOnCircle(cx, cy, outerR, endAngle);
-                    const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
-                    return `M ${cx},${cy} L ${p2.x},${p2.y} A ${outerR},${outerR} 0 ${largeArc},1 ${p3.x},${p3.y} Z`;
-                }
-
                 const p1 = this.pointOnCircle(cx, cy, innerR, startAngle);
                 const p2 = this.pointOnCircle(cx, cy, outerR, startAngle);
                 const p3 = this.pointOnCircle(cx, cy, outerR, endAngle);
@@ -972,13 +910,23 @@
                 const { start, end, cx, cy } = this.getAngleRange();
                 const totalAngle = end - start;
                 const numRings = this.rings.length;
+                const availableRadius = 100 - this.innerRadius;
 
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svg.setAttribute('viewBox', '0 0 100 100');
 
+                // Dalle fantôme invisible pour maintenir le hover
+                const ghostCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                ghostCircle.setAttribute('cx', cx);
+                ghostCircle.setAttribute('cy', cy);
+                ghostCircle.setAttribute('r', this.innerRadius + 5);
+                ghostCircle.setAttribute('fill', 'transparent');
+                ghostCircle.setAttribute('class', 'cell');
+                svg.appendChild(ghostCircle);
+
                 this.rings.forEach((ring, ringIndex) => {
-                    const innerR = (ringIndex / numRings) * 100;
-                    const outerR = ((ringIndex + 1) / numRings) * 100;
+                    const innerR = this.innerRadius + (ringIndex / numRings) * availableRadius;
+                    const outerR = this.innerRadius + ((ringIndex + 1) / numRings) * availableRadius;
                     const divisions = ring.divisions;
                     const anglePerDiv = totalAngle / divisions.length;
 
@@ -1001,6 +949,38 @@
                         }
 
                         svg.appendChild(path);
+
+                        // Add icon if specified (SVG path or text)
+                        if (div.icon || div.svgPath) {
+                            const midAngle = (startAngle + endAngle) / 2;
+                            const midR = (innerR + outerR) / 2;
+                            const pos = this.pointOnCircle(cx, cy, midR, midAngle);
+
+                            if (div.svgPath) {
+                                // SVG path icon
+                                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                                const iconSize = 8;
+                                g.setAttribute('transform', `translate(${pos.x - iconSize/2}, ${pos.y - iconSize/2}) scale(${iconSize/24})`);
+                                g.setAttribute('class', 'cell-icon');
+                                const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                                pathEl.setAttribute('d', div.svgPath);
+                                pathEl.setAttribute('fill', 'none');
+                                pathEl.setAttribute('stroke', 'white');
+                                pathEl.setAttribute('stroke-width', '2');
+                                pathEl.setAttribute('stroke-linecap', 'round');
+                                pathEl.setAttribute('stroke-linejoin', 'round');
+                                g.appendChild(pathEl);
+                                svg.appendChild(g);
+                            } else {
+                                // Text icon
+                                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                                text.setAttribute('x', pos.x);
+                                text.setAttribute('y', pos.y);
+                                text.setAttribute('class', 'cell-icon');
+                                text.textContent = div.icon;
+                                svg.appendChild(text);
+                            }
+                        }
                     });
                 });
 
@@ -1056,6 +1036,28 @@
         });
 
         updateColorIndicator();
+
+        // Lucide-style SVG paths (viewBox 24x24)
+        const ICONS = {
+            save: 'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8',
+            trash: 'M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6',
+            clipboard: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 2h6v4H9z'
+        };
+
+        // File menu en top-left
+        const fileMenu = new RadialMenu({
+            container: document.getElementById('fileMenu'),
+            corner: 'top-left',
+            size: 140,
+            animation: 'push-out',
+            rings: [{
+                divisions: [
+                    { color: '#2a4a5e', svgPath: ICONS.save, action: () => saveAs() },
+                    { color: '#2a4a5e', svgPath: ICONS.trash, action: () => clearCanvas() },
+                    { color: '#2a4a5e', svgPath: ICONS.clipboard, action: () => navigator.clipboard?.writeText(canvas.toDataURL()) },
+                ]
+            }]
+        });
 
         // Initialize on load
         window.addEventListener('load', init);

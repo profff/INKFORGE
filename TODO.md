@@ -17,6 +17,17 @@
 - [ ] Claude peut voir le canvas et répondre en SVG
 - [ ] Workflow : sketch → analyse → code generation
 
+### Phase 7 : Canvas Vectoriel 🔜
+Décision : rester **lean**, focus intégration Claude pas éditeur de dessin.
+
+- [ ] Remplacer canvas raster par canvas SVG (`perfect-freehand`)
+- [ ] Slider de simplification :
+  - 0 = raster (PNG, comme aujourd'hui)
+  - 100 = vectoriel épuré (polylines simplifiées)
+- [ ] Adapter `/snapshot` : retourne SVG texte ou PNG selon le mode
+- [ ] Envoi à Claude en SVG texte (meilleure compréhension que l'image)
+- [ ] (Plus tard) Quelques shapes présets si besoin (rectangle, ellipse, flèche)
+
 ---
 
 ## Historique POC
@@ -51,7 +62,7 @@
 - [ ] Historique persistant
 
 ### Infra
-- [ ] Décider : tldraw watermark vs licence vs custom canvas
+- [x] ~~Décider : tldraw watermark vs licence vs custom canvas~~ → **custom canvas lean** (perfect-freehand)
 - [ ] CI/CD si app desktop (Electron/Tauri)
 
 ### Auth & API (important UX)

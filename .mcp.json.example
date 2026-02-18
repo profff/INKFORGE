@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "inkforge": {
+      "command": "python",
+      "args": ["inkforge-lite/inkforge_mcp.py"]
+    }
+  }
+}

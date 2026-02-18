@@ -287,9 +287,9 @@ def main():
             'INKFORGE Lite',
             f'http://127.0.0.1:{args.port}',
             js_api=api,
-            width=1200,
-            height=800,
-            min_size=(800, 600),
+            width=808,
+            height=648,
+            min_size=(808, 648),
             frameless=True,
             easy_drag=False  # We'll handle drag ourselves
         )

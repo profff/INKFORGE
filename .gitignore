@@ -43,3 +43,10 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# INKFORGE Lite artifacts
+inkforge-lite/current_view.png
+inkforge-lite/snapshot.png
+
+# MCP config (local paths)
+.mcp.json

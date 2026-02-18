@@ -90,7 +90,7 @@ Use with a skill that:
 ┌─────────────────────────────────────────────────────┐
 │  pywebview window                                   │
 │  ┌─────────────────────────────────────────────┐   │
-│  │  Canvas (Vue 3 + PrimeVue)                   │   │
+│  │  Canvas (HTML5 + Vanilla JS)                  │   │
 │  │  - Drawing                                   │   │
 │  │  - Region tracking                           │   │
 │  │  - SVG display                               │   │
